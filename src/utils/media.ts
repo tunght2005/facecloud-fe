@@ -1,4 +1,4 @@
-const apiBaseUrl = import.meta.env.VITE_API_URL || 'https://numerator-bungee-batboy.ngrok-free.dev'
+const apiBaseUrl = import.meta.env.VITE_API_URL || 'https://humanity-steam-swaziland-rover.trycloudflare.com'
 
 export const toAbsoluteMediaUrl = (url?: string | null) => {
   if (!url) {

@@ -11,7 +11,7 @@ export default defineConfig({
     port: 3001,
     proxy: {
       '/api': {
-        target: 'https://numerator-bungee-batboy.ngrok-free.dev',
+        target: 'https://humanity-steam-swaziland-rover.trycloudflare.com',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
       }
