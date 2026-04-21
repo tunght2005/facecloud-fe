@@ -2,7 +2,7 @@ import axios, { type AxiosInstance } from 'axios'
 import { toast } from 'react-toastify'
 
 const http: AxiosInstance = axios.create({
-  baseURL: 'https://humanity-steam-swaziland-rover.trycloudflare.com',
+  baseURL: 'https://census-email-societies-responded.trycloudflare.com',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
