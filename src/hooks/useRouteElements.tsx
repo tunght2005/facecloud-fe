@@ -1,95 +1,80 @@
-import { useState, type ReactNode } from 'react'
-import { Navigate, useRoutes } from 'react-router-dom'
-import PATHS from '../constants/paths'
-import type { User } from '../types'
+import { useRoutes, Navigate } from 'react-router-dom'
+import PATHS from '~/constants/paths'
+import { ProtectedRoute, RejectedRoute, AdminRoute, RoleRoute } from '~/components/RouteGuards'
 
 // Pages
-import LoginPage from '../pages/LoginPage'
-import Dashboard from '../pages/Dashboard'
-import ProfilePage from '../pages/ProfilePage'
-import FaceScanPage from '../pages/FaceScanPage'
+import LoginPage from '~/pages/LoginPage'
+import RegisterPage from '~/pages/RegisterPage'
+import Dashboard from '~/pages/Dashboard'
+import ProfilePage from '~/pages/ProfilePage'
+import FaceScanPage from '~/pages/FaceScanPage'
+import FaceRegisterPage from '~/pages/FaceRegisterPage'
+import NotificationsPage from '~/pages/NotificationsPage'
 
 // Admin
-import AdminLayout from '../layouts/AdminLayout'
+import AdminLayout from '~/layouts/AdminLayout'
+import UsersPage from '~/pages/admin/UsersPage'
+import CreateUserPage from '~/pages/admin/CreateUserPage'
+import ClassesPage from '~/pages/admin/ClassesPage'
+import CreateClassPage from '~/pages/admin/CreateClassPage'
+import AttendancePage from '~/pages/admin/AttendancePage'
+import CreateSessionPage from '~/pages/admin/CreateSessionPage'
+import AttendanceLogsPage from '~/pages/admin/AttendanceLogsPage'
+import FacePermissionsPage from '~/pages/admin/FacePermissionsPage'
 
-// ===== Protected Route =====
-function ProtectedRoute({ user, children }: { user: User | null; children: ReactNode }) {
-  if (!user) {
-    return <Navigate to={PATHS.LOGIN} replace />
-  }
-  return <>{children}</>
-}
-
-// ===== Hook =====
 export default function useRouteElements() {
-  const [user, setUser] = useState<User | null>(null)
-
-  const handleLogin = (userData: User) => {
-    setUser(userData)
-  }
-
-  const handleLogout = () => {
-    setUser(null)
-  }
-
   const routeElements = useRoutes([
-    // ===== Trang chủ =====
+    // ===== Rejected Routes (chưa đăng nhập mới vào được) =====
     {
-      path: PATHS.HOME,
-      element: <Navigate to={user ? PATHS.DASHBOARD : PATHS.LOGIN} replace />,
+      element: <RejectedRoute />,
+      children: [
+        { path: PATHS.LOGIN, element: <LoginPage /> },
+        { path: PATHS.REGISTER, element: <RegisterPage /> }
+      ]
     },
 
-    // ===== Student / Teacher Login =====
+    // ===== Protected Routes (phải đăng nhập) =====
     {
-      path: PATHS.LOGIN,
-      element: user ? (
-        <Navigate to={PATHS.DASHBOARD} replace />
-      ) : (
-        <LoginPage onLogin={handleLogin} />
-      ),
+      element: <ProtectedRoute />,
+      children: [
+        { path: PATHS.DASHBOARD, element: <Dashboard /> },
+        { path: PATHS.PROFILE, element: <ProfilePage /> },
+        { path: PATHS.FACE_SCAN, element: <FaceScanPage /> },
+        { path: PATHS.FACE_REGISTER, element: <FaceRegisterPage /> },
+        { path: PATHS.NOTIFICATIONS, element: <NotificationsPage /> }
+      ]
     },
 
-    // ===== Dashboard (Student / Teacher) =====
+    // ===== Admin Routes (phải là admin) =====
     {
-      path: PATHS.DASHBOARD,
-      element: (
-        <ProtectedRoute user={user}>
-          <Dashboard user={user!} onLogout={handleLogout} />
-        </ProtectedRoute>
-      ),
-    },
-
-    // ===== Profile =====
-    {
-      path: PATHS.PROFILE,
-      element: (
-        <ProtectedRoute user={user}>
-          <ProfilePage user={user!} />
-        </ProtectedRoute>
-      ),
-    },
-
-    // ===== Face Scan =====
-    {
-      path: PATHS.FACE_SCAN,
-      element: (
-        <ProtectedRoute user={user}>
-          <FaceScanPage user={user!} />
-        </ProtectedRoute>
-      ),
-    },
-
-    // ===== Admin Dashboard =====
-    {
-      path: PATHS.ADMIN,
-      element: <AdminLayout />,
+      element: <AdminRoute />,
+      children: [
+        {
+          path: PATHS.ADMIN,
+          element: <AdminLayout />,
+          children: [
+            { index: true, element: <Navigate to={PATHS.ADMIN_CLASSES} replace /> },
+            {
+              element: <RoleRoute allow={['admin']} redirectTo={PATHS.ADMIN_CLASSES} />,
+              children: [
+                { path: PATHS.ADMIN_USERS, element: <UsersPage /> },
+                { path: PATHS.ADMIN_USERS_CREATE, element: <CreateUserPage /> }
+              ]
+            },
+            { path: PATHS.ADMIN_CLASSES, element: <ClassesPage /> },
+            { path: PATHS.ADMIN_CLASSES_CREATE, element: <CreateClassPage /> },
+            { path: PATHS.ADMIN_ATTENDANCE, element: <AttendancePage /> },
+            { path: PATHS.ADMIN_ATTENDANCE_CREATE, element: <CreateSessionPage /> },
+            { path: PATHS.ADMIN_ATTENDANCE_LOGS, element: <AttendanceLogsPage /> },
+            { path: PATHS.ADMIN_FACE_PERMISSIONS, element: <FacePermissionsPage /> }
+          ]
+        }
+      ]
     },
 
     // ===== Fallback =====
-    {
-      path: '*',
-      element: <Navigate to={PATHS.HOME} replace />,
-    },
+    { path: PATHS.HOME, element: <Navigate to={PATHS.LOGIN} replace /> },
+    { path: '*', element: <Navigate to={PATHS.HOME} replace /> }
   ])
 
   return routeElements
