@@ -1,77 +1,107 @@
+import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import type { User } from '../types'
-import PATHS from '../constants/paths'
+import authApi from '~/apis/auth.api'
+import faceApi from '~/apis/face.api'
+import { useApp } from '~/contexts/app.context'
+import PATHS from '~/constants/paths'
+import { toAbsoluteMediaUrl } from '~/utils/media'
 
-type ProfilePageProps = {
-  user: User
-}
+export default function ProfilePage() {
+  const { roles } = useApp()
 
-export default function ProfilePage({ user }: ProfilePageProps) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['profile'],
+    queryFn: () => authApi.getMe()
+  })
+
+  const { data: faceData } = useQuery({
+    queryKey: ['face-profile'],
+    queryFn: () => faceApi.getProfile(),
+    retry: false
+  })
+
+  const user = data?.data?.user
+  const userRoles = data?.data?.roles || roles
+  const faceProfile = faceData?.data?.face_profile
+  const faceImageUrl = toAbsoluteMediaUrl(faceProfile?.face_image_url)
+
+  if (isLoading) {
+    return <div className='flex min-h-screen items-center justify-center bg-pink-50 text-slate-400'>Đang tải...</div>
+  }
+
   return (
-    <div className="min-h-screen bg-pink-50 p-6 text-slate-900">
-      <div className="mx-auto max-w-4xl space-y-6">
-        <div className="rounded-3xl bg-white p-8 shadow-xl shadow-pink-200/40 border border-pink-100">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+    <div className='min-h-screen bg-pink-50 px-4 py-10'>
+      <div className='mx-auto max-w-2xl'>
+        <Link
+          to={PATHS.DASHBOARD}
+          className='mb-6 inline-flex items-center gap-2 text-sm font-medium text-pink-600 hover:text-pink-500'
+        >
+          ← Quay lại Dashboard
+        </Link>
+
+        <div className='rounded-3xl border border-pink-200 bg-white p-8 shadow-lg shadow-pink-100/50'>
+          <div className='mb-6 flex items-center gap-5'>
+            <div className='flex h-20 w-20 items-center justify-center rounded-full bg-pink-100 text-3xl font-bold text-pink-600'>
+              {user?.full_name?.charAt(0) || '?'}
+            </div>
             <div>
-              <p className="text-sm uppercase tracking-[0.35em] text-pink-600">Hồ sơ người dùng</p>
-              <h1 className="mt-4 text-3xl font-bold text-slate-900">Thông tin tài khoản</h1>
-              <p className="mt-3 text-slate-600">Mọi tài khoản đều do admin cấp, không có đăng ký tự động.</p>
+              <h1 className='text-2xl font-bold text-slate-900'>{user?.full_name}</h1>
+              <p className='text-slate-500'>{user?.email}</p>
+              <div className='mt-2 flex gap-2'>
+                {userRoles.map((r: string) => (
+                  <span key={r} className='rounded-full bg-pink-100 px-3 py-1 text-xs font-medium text-pink-600'>
+                    {r}
+                  </span>
+                ))}
+              </div>
             </div>
-            <img src={user.avatarUrl} alt="avatar" className="h-28 w-28 rounded-3xl border border-pink-200 object-cover" />
           </div>
 
-          <div className="mt-8 grid gap-6 sm:grid-cols-2">
-            <div className="rounded-3xl border border-pink-100 bg-pink-50 p-6">
-              <p className="text-sm uppercase tracking-[0.25em] text-pink-500">Tên đầy đủ</p>
-              <p className="mt-3 text-xl font-semibold text-slate-900">{user.name}</p>
+          <div className='space-y-4 border-t border-pink-100 pt-6'>
+            <div className='flex justify-between rounded-2xl bg-pink-50 p-4'>
+              <span className='text-sm text-slate-500'>Mã người dùng</span>
+              <span className='text-sm font-medium text-slate-900'>{user?.user_code || 'N/A'}</span>
             </div>
-            <div className="rounded-3xl border border-pink-100 bg-pink-50 p-6">
-              <p className="text-sm uppercase tracking-[0.25em] text-pink-500">Email</p>
-              <p className="mt-3 text-xl font-semibold text-slate-900">{user.email}</p>
+            <div className='flex justify-between rounded-2xl bg-pink-50 p-4'>
+              <span className='text-sm text-slate-500'>Trạng thái</span>
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${user?.user_status === 'active' ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-500'}`}
+              >
+                {user?.user_status || 'N/A'}
+              </span>
             </div>
-            <div className="rounded-3xl border border-pink-100 bg-pink-50 p-6">
-              <p className="text-sm uppercase tracking-[0.25em] text-pink-500">Mã số</p>
-              <p className="mt-3 text-xl font-semibold text-slate-900">{user.id}</p>
+            <div className='flex justify-between rounded-2xl bg-pink-50 p-4'>
+              <span className='text-sm text-slate-500'>Lớp</span>
+              <span className='text-sm font-medium text-slate-900'>{user?.class_name || 'Chưa gán'}</span>
             </div>
-            {user.role === 'student' ? (
-              <>
-                <div className="rounded-3xl border border-pink-100 bg-pink-50 p-6">
-                  <p className="text-sm uppercase tracking-[0.25em] text-pink-500">Lớp</p>
-                  <p className="mt-3 text-xl font-semibold text-slate-900">{user.className ?? 'Chưa cập nhật'}</p>
-                </div>
-                <div className="rounded-3xl border border-pink-100 bg-pink-50 p-6">
-                  <p className="text-sm uppercase tracking-[0.25em] text-pink-500">Vai trò</p>
-                  <p className="mt-3 text-xl font-semibold text-slate-900">Học sinh</p>
-                </div>
-              </>
+          </div>
+
+          <div className='mt-6 border-t border-pink-100 pt-6'>
+            <h2 className='mb-3 text-lg font-semibold text-slate-900'>Khuôn mặt đã đăng ký</h2>
+            {faceImageUrl ? (
+              <div className='overflow-hidden rounded-2xl border border-pink-200 bg-pink-50'>
+                <img src={faceImageUrl} alt='Registered face' className='max-h-72 w-full object-contain' />
+              </div>
             ) : (
-              <>
-                <div className="rounded-3xl border border-pink-100 bg-pink-50 p-6">
-                  <p className="text-sm uppercase tracking-[0.25em] text-pink-500">Bộ môn</p>
-                  <p className="mt-3 text-xl font-semibold text-slate-900">{user.subject ?? 'Chưa cập nhật'}</p>
-                </div>
-                <div className="rounded-3xl border border-pink-100 bg-pink-50 p-6">
-                  <p className="text-sm uppercase tracking-[0.25em] text-pink-500">Lớp chủ nhiệm</p>
-                  <p className="mt-3 text-xl font-semibold text-slate-900">{user.homeRoom ?? 'Chưa cập nhật'}</p>
-                </div>
-              </>
+              <p className='rounded-2xl border border-dashed border-pink-200 bg-pink-50 p-4 text-sm text-slate-500'>
+                Chưa có ảnh khuôn mặt đã đăng ký hoặc ảnh chưa có URL.
+              </p>
             )}
           </div>
 
-          <div className="mt-8 rounded-3xl border border-pink-100 bg-pink-50 p-6">
-            <p className="text-sm uppercase tracking-[0.25em] text-pink-500">Ghi chú của admin</p>
-            <p className="mt-3 text-slate-600">Tài khoản này chỉ dùng để truy cập hệ thống điểm danh. Đổi mật khẩu và cấu hình quyền do admin quản lý.</p>
-          </div>
-
-          <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
-            <Link to={PATHS.DASHBOARD} className="inline-flex items-center justify-center rounded-2xl border border-pink-200 bg-white px-6 py-3 text-slate-900 transition hover:bg-pink-50">
-              Quay lại trang chính
+          <div className='mt-6 flex gap-3'>
+            <Link
+              to={PATHS.FACE_REGISTER}
+              className='flex-1 rounded-2xl bg-pink-500 py-3 text-center text-sm font-semibold text-white transition hover:bg-pink-400'
+            >
+              Đăng ký khuôn mặt
             </Link>
-            {user.role === 'student' && (
-              <Link to={PATHS.FACE_SCAN} className="inline-flex items-center justify-center rounded-2xl bg-pink-600 px-6 py-3 text-white transition hover:bg-pink-500">
-                Mở trang điểm danh
-              </Link>
-            )}
+            <Link
+              to={PATHS.DASHBOARD}
+              className='rounded-2xl border border-pink-200 px-5 py-3 text-sm font-medium text-slate-600 transition hover:bg-pink-50'
+            >
+              Dashboard
+            </Link>
           </div>
         </div>
       </div>

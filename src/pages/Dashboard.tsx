@@ -1,155 +1,206 @@
 import { Link } from 'react-router-dom'
-import { useEffect, useState } from 'react'
-import type { User } from '../types'
-import PATHS from '../constants/paths'
+import { useQuery } from '@tanstack/react-query'
+import { useApp } from '~/contexts/app.context'
+import PATHS from '~/constants/paths'
+import { FiBell, FiCamera, FiSettings, FiUser, FiClock, FiCheckCircle, FiFileText, FiUserCheck, FiLogOut } from 'react-icons/fi'
+import userApi from '~/apis/user.api'
+import { toAbsoluteMediaUrl } from '~/utils/media'
 
-type DashboardProps = {
-  user: User
-  onLogout: () => void
+const formatDate = (val: string | null | undefined) => {
+  if (!val) return '—'
+  const d = new Date(val)
+  if (isNaN(d.getTime())) return val
+  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-type AttendanceRecord = {
-  date: string
-  time: string
-  status: 'present' | 'absent' | 'late'
+const formatTime = (val: string | null | undefined) => {
+  if (!val) return '—'
+  const d = new Date(val)
+  if (isNaN(d.getTime())) return val
+  return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 }
 
-export default function Dashboard({ user, onLogout }: DashboardProps) {
-  const [attendanceHistory, setAttendanceHistory] = useState<AttendanceRecord[]>([])
+export default function Dashboard() {
+  const { user, roles, clearAuth } = useApp()
+  const isStudent = roles.includes('student')
 
-  useEffect(() => {
-    // Mock data for attendance history
-    if (user.role === 'student') {
-      setAttendanceHistory([
-        { date: '2024-04-20', time: '08:00', status: 'present' },
-        { date: '2024-04-19', time: '08:05', status: 'late' },
-        { date: '2024-04-18', time: '08:00', status: 'present' },
-        { date: '2024-04-17', time: '08:00', status: 'present' },
-        { date: '2024-04-16', time: '08:10', status: 'late' },
-      ])
-    }
-  }, [user.role])
+  const { data: attendanceData } = useQuery({
+    queryKey: ['my-attendance'],
+    queryFn: () => userApi.getMyAttendance(),
+    enabled: isStudent
+  })
+
+  const records = Array.isArray(attendanceData?.data?.records) ? attendanceData.data.records : []
+
+  const handleLogout = () => {
+    clearAuth()
+  }
 
   return (
-    <div className="min-h-screen bg-pink-50 text-slate-900 p-6">
-      <div className="mx-auto max-w-6xl space-y-8">
-        <header className="flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-xl shadow-pink-200/50 border border-pink-100">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm uppercase tracking-[0.35em] text-pink-600">FaceCloud School</p>
-              <h1 className="mt-3 text-3xl font-bold">Xin chào, {user.name}!</h1>
-              <p className="mt-2 text-slate-600">
-                {user.role === 'student' ? 'Điểm danh học sinh' : 'Quản lý lớp phụ trách'}
-              </p>
+    <div className='min-h-screen bg-pink-50'>
+      {/* Header */}
+      <header className='sticky top-0 z-10 border-b border-pink-200 bg-white/80 px-6 py-4 backdrop-blur-md'>
+        <div className='mx-auto flex max-w-6xl items-center justify-between'>
+          <div className='flex items-center gap-3'>
+            <div className='flex h-10 w-10 items-center justify-center rounded-full bg-pink-500 text-lg font-bold text-white shadow-md shadow-pink-200'>
+              F
             </div>
-            <button
-              onClick={onLogout}
-              className="inline-flex items-center justify-center rounded-2xl bg-pink-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-pink-500"
+            <h1 className='text-xl font-bold text-slate-900'>FaceCloud</h1>
+          </div>
+          <div className='flex items-center gap-4'>
+            <Link
+              to={PATHS.NOTIFICATIONS}
+              className='flex items-center gap-2 rounded-2xl border border-pink-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-pink-50'
             >
-              Đăng xuất
+              <FiBell /> <span className='hidden sm:inline'>Thông báo</span>
+            </Link>
+            <Link
+              to={PATHS.PROFILE}
+              className='flex items-center gap-2 rounded-2xl border border-pink-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-pink-50'
+            >
+              <FiUser /> <span className='hidden sm:inline'>Hồ sơ</span>
+            </Link>
+            <button
+              onClick={handleLogout}
+              className='flex items-center gap-2 rounded-2xl bg-pink-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-pink-400'
+            >
+              <FiLogOut /> <span className='hidden sm:inline'>Đăng xuất</span>
             </button>
           </div>
-        </header>
+        </div>
+      </header>
 
-        <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="space-y-6">
-            <div className="rounded-3xl bg-white p-6 shadow-lg shadow-pink-100 border border-pink-100">
-              <div className="flex items-center gap-4">
-                <img src={user.avatarUrl} alt="avatar" className="h-16 w-16 rounded-2xl border border-pink-200 object-cover" />
-                <div>
-                  <p className="text-lg font-semibold">{user.name}</p>
-                  <p className="text-sm text-slate-500">{user.email}</p>
-                  <p className="mt-1 rounded-full bg-pink-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-pink-700">
-                    {user.role === 'student' ? 'Học sinh' : 'Giáo viên'}
-                  </p>
-                </div>
-              </div>
+      {/* Main Content */}
+      <main className='mx-auto max-w-6xl px-6 py-8'>
+        {/* Welcome Card */}
+        <div className='rounded-3xl border border-pink-200 bg-gradient-to-br from-pink-500 to-pink-600 p-8 text-white shadow-xl shadow-pink-200/50'>
+          <h2 className='text-3xl font-bold'>Xin chào, {user?.full_name || 'Người dùng'}!</h2>
+          <p className='mt-2 flex items-center gap-2 text-pink-100'>
+            <span className='rounded-full bg-white/20 px-3 py-0.5 text-xs font-bold uppercase'>{roles.join(', ')}</span>
+            <span>• Mã: {user?.user_code || 'N/A'}</span>
+          </p>
+        </div>
 
-              <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-3xl border border-pink-100 bg-pink-50 p-4">
-                  <p className="text-xs uppercase tracking-[0.25em] text-slate-400">Mã</p>
-                  <p className="mt-2 text-lg font-semibold">{user.id}</p>
-                </div>
-                <div className="rounded-3xl border border-pink-100 bg-pink-50 p-4">
-                  <p className="text-xs uppercase tracking-[0.25em] text-slate-400">Thông tin chính</p>
-                  <p className="mt-2 text-lg font-semibold text-slate-900">
-                    {user.role === 'student' ? user.className ?? 'Chưa cập nhật' : user.subject ?? 'Chưa cập nhật'}
-                  </p>
-                </div>
-                <div className="rounded-3xl border border-pink-100 bg-pink-50 p-4">
-                  <p className="text-xs uppercase tracking-[0.25em] text-slate-400">Phụ trách</p>
-                  <p className="mt-2 text-lg font-semibold text-slate-900">
-                    {user.role === 'student' ? user.supervisor ?? 'Chưa cập nhật' : user.homeRoom ?? 'Chưa cập nhật'}
-                  </p>
-                </div>
+        {/* Action Cards */}
+        <div className='mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4'>
+          {/* Card: Điểm danh */}
+          {isStudent && (
+            <Link
+              to={PATHS.FACE_SCAN}
+              className='group rounded-3xl border border-pink-200 bg-white p-6 shadow-sm transition hover:shadow-lg hover:shadow-pink-100/50'
+            >
+              <div className='mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-pink-100 text-2xl text-pink-600 transition group-hover:bg-pink-200 group-hover:scale-110 duration-300'>
+                <FiCamera />
               </div>
+              <h3 className='text-lg font-bold text-slate-900'>Điểm danh</h3>
+              <p className='mt-2 text-sm text-slate-500'>Quét khuôn mặt để điểm danh tự động.</p>
+            </Link>
+          )}
+
+          {/* Card: Đăng ký khuôn mặt */}
+          <Link
+            to={PATHS.FACE_REGISTER}
+            className='group rounded-3xl border border-pink-200 bg-white p-6 shadow-sm transition hover:shadow-lg hover:shadow-pink-100/50'
+          >
+            <div className='mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-pink-100 text-2xl text-pink-600 transition group-hover:bg-pink-200 group-hover:scale-110 duration-300'>
+              <FiUserCheck />
+            </div>
+            <h3 className='text-lg font-bold text-slate-900'>Đăng ký khuôn mặt</h3>
+            <p className='mt-2 text-sm text-slate-500'>Đăng ký hoặc cập nhật khuôn mặt.</p>
+          </Link>
+
+          {/* Card: Hồ sơ */}
+          <Link
+            to={PATHS.PROFILE}
+            className='group rounded-3xl border border-pink-200 bg-white p-6 shadow-sm transition hover:shadow-lg hover:shadow-pink-100/50'
+          >
+            <div className='mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-pink-100 text-2xl text-pink-600 transition group-hover:bg-pink-200 group-hover:scale-110 duration-300'>
+              <FiFileText />
+            </div>
+            <h3 className='text-lg font-bold text-slate-900'>Hồ sơ cá nhân</h3>
+            <p className='mt-2 text-sm text-slate-500'>Xem và quản lý thông tin cá nhân.</p>
+          </Link>
+
+          {/* Card: Quản trị (Admin only) */}
+          {(roles.includes('admin') || roles.includes('teacher')) && (
+            <Link
+              to={PATHS.ADMIN}
+              className='group rounded-3xl border border-pink-200 bg-white p-6 shadow-sm transition hover:shadow-lg hover:shadow-pink-100/50'
+            >
+              <div className='mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-pink-100 text-2xl text-pink-600 transition group-hover:bg-pink-200 group-hover:scale-110 duration-300'>
+                <FiSettings />
+              </div>
+              <h3 className='text-lg font-bold text-slate-900'>Quản trị hệ thống</h3>
+              <p className='mt-2 text-sm text-slate-500'>
+                Quản lý lớp học, học sinh và buổi điểm danh.
+              </p>
+            </Link>
+          )}
+        </div>
+
+        {/* Student Attendance History */}
+        {isStudent && (
+          <div className='mt-10'>
+            <div className='mb-4 flex items-center gap-3'>
+              <div className='flex h-10 w-10 items-center justify-center rounded-full bg-pink-100 text-pink-500'>
+                <FiClock className='text-xl' />
+              </div>
+              <h2 className='text-xl font-bold text-slate-900'>Lịch sử điểm danh gần đây</h2>
             </div>
 
-            {user.role === 'student' && (
-              <div className="rounded-3xl bg-white p-6 shadow-lg shadow-pink-100 border border-pink-100">
-                <h2 className="text-xl font-semibold">Lịch sử điểm danh</h2>
-                <div className="mt-4 space-y-3">
-                  {attendanceHistory.length > 0 ? (
-                    attendanceHistory.map((record, index) => (
-                      <div key={index} className="flex items-center justify-between rounded-2xl border border-pink-100 bg-pink-50 p-4">
-                        <div>
-                          <p className="font-semibold">{record.date}</p>
-                          <p className="text-sm text-slate-600">{record.time}</p>
-                        </div>
-                        <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${
-                          record.status === 'present' ? 'bg-green-100 text-green-700' :
-                          record.status === 'late' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
-                          {record.status === 'present' ? 'Có mặt' : record.status === 'late' ? 'Muộn' : 'Vắng'}
-                        </span>
+            {records.length === 0 ? (
+              <div className='rounded-3xl border border-dashed border-pink-200 bg-white p-12 text-center text-sm text-slate-400'>
+                Bạn chưa có lịch sử điểm danh nào.
+              </div>
+            ) : (
+              <div className='grid gap-4 md:grid-cols-2'>
+                {records.map((r: any) => (
+                  <div
+                    key={r.attendance_id}
+                    className='rounded-3xl border border-pink-100 bg-white p-5 shadow-sm transition hover:shadow-md hover:border-pink-300 group'
+                  >
+                    <div className='flex items-start gap-4'>
+                      {/* Image */}
+                      <div className='h-24 w-24 shrink-0 overflow-hidden rounded-2xl border border-pink-100 bg-slate-50 shadow-inner'>
+                        {r.captured_image_url ? (
+                          <img
+                            src={toAbsoluteMediaUrl(r.captured_image_url) || ''}
+                            alt='Ảnh điểm danh'
+                            className='h-full w-full object-cover transition duration-500 group-hover:scale-110'
+                          />
+                        ) : (
+                          <div className='flex h-full w-full items-center justify-center text-slate-200'>
+                            <FiCamera size={32} />
+                          </div>
+                        )}
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-slate-600">Chưa có dữ liệu điểm danh.</p>
-                  )}
-                </div>
+
+                      {/* Info */}
+                      <div className='min-w-0 flex-1'>
+                        <div className='flex items-center gap-2'>
+                          <FiCheckCircle className='shrink-0 text-green-500' />
+                          <span className='text-sm font-bold text-green-700 uppercase tracking-tight'>Có mặt</span>
+                        </div>
+                        <h4 className='mt-1 truncate text-base font-bold text-slate-900'>
+                          {r.class_name || `Lớp #${r.class_id}`}
+                        </h4>
+                        <div className='mt-2 space-y-1 text-xs text-slate-500'>
+                          <p className='flex items-center gap-1.5'><FiClock className='text-pink-400' /> {formatDate(r.session_date)} — {formatTime(r.check_in_time)}</p>
+                          {r.similarity_score && (
+                            <p className='font-semibold text-emerald-600 bg-emerald-50 inline-block px-2 py-0.5 rounded-lg'>
+                              Khớp: {Number(r.similarity_score).toFixed(1)}%
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
-
-            <div className="rounded-3xl bg-white p-6 shadow-lg shadow-pink-100 border border-pink-100">
-              <h2 className="text-xl font-semibold">Hướng dẫn sử dụng</h2>
-              <ul className="mt-4 space-y-3 text-slate-600">
-                <li>• Sinh viên sử dụng trang điểm danh khuôn mặt để quét khuôn mặt.</li>
-                <li>• Giáo viên phụ trách lớp sẽ kiểm tra danh sách học sinh.</li>
-                <li>• Tài khoản chỉ có thể được cấp bởi admin nên không có đăng ký tự do.</li>
-              </ul>
-            </div>
           </div>
-
-          <div className="space-y-6">
-            <div className="rounded-3xl bg-gradient-to-br from-pink-500 to-rose-500 p-6 text-white shadow-xl shadow-pink-200/30">
-              <p className="text-sm uppercase tracking-[0.35em] text-pink-100/80">Nhanh chóng</p>
-              <h2 className="mt-4 text-2xl font-bold">Bắt đầu</h2>
-              <p className="mt-3 text-pink-100/90">Chọn chức năng phù hợp để vào trang tương ứng.</p>
-              <div className="mt-6 flex flex-col gap-3">
-                {user.role === 'student' ? (
-                  <Link to={PATHS.FACE_SCAN} className="rounded-2xl bg-white px-5 py-3 text-center font-semibold text-pink-700 transition hover:bg-pink-50">
-                    Mở trang điểm danh
-                  </Link>
-                ) : (
-                  <div className="rounded-3xl bg-white/10 p-4 text-pink-100">
-                    <p>Giáo viên có thể xem thông tin lớp và học sinh quản lý.</p>
-                  </div>
-                )}
-                <Link to={PATHS.PROFILE} className="rounded-2xl border border-white/60 bg-white/10 px-5 py-3 text-center font-semibold text-white transition hover:bg-white/20">
-                  Xem hồ sơ
-                </Link>
-              </div>
-            </div>
-
-            <div className="rounded-3xl bg-white p-6 shadow-lg shadow-pink-100 border border-pink-100">
-              <h2 className="text-lg font-semibold">Thông báo admin</h2>
-              <p className="mt-3 text-slate-600">Tài khoản được quản lý bởi admin. Nếu cần cấp quyền mới, hãy liên hệ bộ phận CNTT hoặc quản trị hệ thống.</p>
-            </div>
-          </div>
-        </section>
-      </div>
+        )}
+      </main>
     </div>
   )
 }

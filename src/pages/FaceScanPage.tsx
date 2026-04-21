@@ -1,178 +1,203 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import type { User } from '../types'
-import PATHS from '../constants/paths'
+import { toast } from 'react-toastify'
+import attendanceApi from '~/apis/attendance.api'
+import faceApi from '~/apis/face.api'
+import PATHS from '~/constants/paths'
+import type { AttendanceSession } from '~/types'
+import { FiCamera, FiCheckCircle, FiXCircle, FiRefreshCw, FiChevronLeft } from 'react-icons/fi'
 
-type FaceScanPageProps = {
-  user: User
-}
+export default function FaceScanPage() {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [stream, setStream] = useState<MediaStream | null>(null)
+  const [selectedSession, setSelectedSession] = useState<number | null>(null)
+  const [scanResult, setScanResult] = useState<{ similarity: number; success: boolean } | null>(null)
 
-type ScanResult = {
-  status: string
-  name?: string
-  student_id?: string
-  time?: string
-}
+  const { data: sessionsData } = useQuery({
+    queryKey: ['open-sessions'],
+    queryFn: () => attendanceApi.getSessionList({ status: 'open' })
+  })
+  const sessions = Array.isArray(sessionsData?.data?.sessions) ? sessionsData.data.sessions : []
 
-export default function FaceScanPage({ user }: FaceScanPageProps) {
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const [status, setStatus] = useState('Đang khởi động camera...')
-  const [result, setResult] = useState<ScanResult | null>(null)
-  const [streaming, setStreaming] = useState(false)
-  const [isScanning, setIsScanning] = useState(false)
+  const scanMutation = useMutation({
+    mutationFn: attendanceApi.scan,
+    onSuccess: (data: any) => {
+      const similarity = data?.data?.verification?.similarity || 0
+      setScanResult({ similarity, success: true })
+      toast.success(`Điểm danh thành công! Độ tương đồng: ${similarity.toFixed(2)}%`)
+      stopCamera()
+    },
+    onError: (error: any) => {
+      const msg = error.response?.data?.message || 'Điểm danh thất bại'
+      const similarity = error.response?.data?.similarity
+      setScanResult({ similarity: similarity || 0, success: false })
+      toast.error(msg)
+    }
+  })
 
-  useEffect(() => {
-    startCamera()
-    return () => stopCamera()
+  const startCamera = useCallback(async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream
+      }
+      setStream(mediaStream)
+      setScanResult(null)
+    } catch {
+      toast.error('Không thể truy cập camera')
+    }
   }, [])
 
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
-      setStreaming(true)
-      setStatus('Đang quét...')
-    } catch (error) {
-      console.error(error)
-      setStatus('Không thể mở camera')
+  const stopCamera = useCallback(() => {
+    stream?.getTracks().forEach((t) => t.stop())
+    setStream(null)
+  }, [stream])
+
+  const handleScan = useCallback(() => {
+    if (!videoRef.current || !canvasRef.current || !selectedSession) {
+      toast.error('Vui lòng chọn buổi điểm danh trước!')
+      return
     }
-  }
-
-  const stopCamera = () => {
-    const stream = videoRef.current?.srcObject as MediaStream | null
-    stream?.getTracks().forEach((track) => track.stop())
-  }
-
-  const captureFrame = () => {
-    const video = videoRef.current
     const canvas = canvasRef.current
-    if (!video || !canvas) return null
+    canvas.width = videoRef.current.videoWidth
+    canvas.height = videoRef.current.videoHeight
+    canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0)
+    const base64 = canvas.toDataURL('image/jpeg')
 
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return null
+    canvas.toBlob(async (blob) => {
+      try {
+        let capturedImageUrl: string | undefined
+        if (blob) {
+          const file = new File([blob], `captured-${Date.now()}.jpg`, { type: 'image/jpeg' })
+          const uploadRes = await faceApi.uploadImage(file, 'captured')
+          capturedImageUrl = uploadRes.data.image_url
+        }
 
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-    return canvas.toDataURL('image/jpeg')
-  }
-
-  const handleScan = useCallback(async () => {
-    if (!streaming) {
-      setStatus('Camera chưa sẵn sàng')
-      return
-    }
-    if (isScanning) return
-
-    setIsScanning(true)
-    setStatus('Đang nhận diện...')
-    const image = captureFrame()
-    if (!image) {
-      setStatus('Không lấy được ảnh từ camera')
-      setIsScanning(false)
-      return
-    }
-
-    try {
-      const res = await fetch('http://localhost:5000/attendance/face-scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image }),
-      })
-      const data = await res.json()
-
-      if (data.status === 'success') {
-        setStatus('✅ Điểm danh thành công')
-        setResult(data)
-      } else if (data.status === 'already') {
-        setStatus('⚠️ Bạn đã điểm danh rồi')
-      } else {
-        setStatus('❌ Không nhận diện được')
+        scanMutation.mutate({
+          imageBase64: base64,
+          attendance_session_id: selectedSession,
+          captured_image_url: capturedImageUrl
+        })
+      } catch (error) {
+        console.error(error)
+        toast.error('Upload ảnh điểm danh thất bại')
       }
-    } catch (error) {
-      console.error(error)
-      setStatus('Lỗi server hoặc không kết nối được backend')
-    } finally {
-      setIsScanning(false)
-    }
-  }, [isScanning, streaming])
-
-  useEffect(() => {
-    if (!streaming) return
-    const interval = setInterval(() => {
-      void handleScan()
-    }, 3000)
-    return () => clearInterval(interval)
-  }, [streaming, handleScan])
+    }, 'image/jpeg')
+  }, [selectedSession, scanMutation])
 
   return (
-    <div className="min-h-screen bg-pink-50 p-6 text-slate-900">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <div className="rounded-3xl bg-white p-6 shadow-xl shadow-pink-200/40 border border-pink-100">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-pink-600">FaceScan</p>
-              <h1 className="mt-3 text-3xl font-bold text-slate-900">Điểm danh bằng khuôn mặt</h1>
-              <p className="mt-2 text-slate-600">Chỉ dành cho học sinh đã được cấp tài khoản bởi admin.</p>
-            </div>
-            <Link to={PATHS.DASHBOARD} className="inline-flex items-center justify-center rounded-2xl border border-pink-200 bg-pink-50 px-5 py-3 text-slate-900 transition hover:bg-pink-100">
-              Quay lại dashboard
-            </Link>
-          </div>
-        </div>
+    <div className='min-h-screen bg-pink-50 px-4 py-10'>
+      <div className='mx-auto max-w-xl'>
+        <Link
+          to={PATHS.DASHBOARD}
+          className='mb-6 inline-flex items-center gap-2 text-sm font-medium text-pink-600 hover:text-pink-500'
+        >
+          <FiChevronLeft /> Quay lại Dashboard
+        </Link>
 
-        <div className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
-          <div className="rounded-3xl bg-white p-6 shadow-lg shadow-pink-200/40 border border-pink-100">
-            <div className="relative overflow-hidden rounded-3xl bg-slate-900 p-4 shadow-inner">
-              <video ref={videoRef} className="h-[360px] w-full rounded-3xl object-cover" autoPlay muted playsInline />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-slate-950/80 to-transparent" />
+        <div className='rounded-3xl border border-pink-200 bg-white p-8 shadow-lg shadow-pink-100/50'>
+          <h1 className='mb-2 text-2xl font-bold text-slate-900'>Điểm danh bằng khuôn mặt</h1>
+          <p className='mb-6 text-sm text-slate-500'>Quét khuôn mặt để ghi nhận điểm danh tự động.</p>
+
+          {/* Session selector */}
+          <div className='mb-6'>
+            <label className='mb-1.5 block text-sm font-medium text-slate-700'>Chọn buổi điểm danh</label>
+            <select
+              value={selectedSession || ''}
+              onChange={(e) => setSelectedSession(Number(e.target.value))}
+              className='w-full rounded-2xl border border-pink-200 bg-pink-50 px-4 py-3 text-slate-900 outline-none transition focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20'
+            >
+              <option value=''>-- Chọn buổi --</option>
+              {sessions.map((s: AttendanceSession) => {
+                const dateStr = s.session_date
+                  ? new Date(s.session_date).toLocaleDateString('vi-VN', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric'
+                    })
+                  : ''
+                const formatTime = (val: string | null | undefined) => {
+                  if (!val) return ''
+                  const d = new Date(val)
+                  if (isNaN(d.getTime())) return val
+                  return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                }
+                return (
+                  <option key={s.attendance_session_id} value={s.attendance_session_id}>
+                    {s.class_name || `Lớp ${s.class_id}`} — {dateStr || s.session_date} ({formatTime(s.start_time)} - {formatTime(s.end_time)})
+                  </option>
+                )
+              })}
+            </select>
+            {sessions.length === 0 && (
+              <p className='mt-2 text-xs text-slate-400'>Không có buổi điểm danh nào đang mở.</p>
+            )}
+          </div>
+
+          {/* Camera */}
+          <div className='overflow-hidden rounded-2xl border border-pink-200 bg-slate-900'>
+            <video ref={videoRef} autoPlay playsInline muted className='aspect-video w-full object-cover' />
+          </div>
+          <canvas ref={canvasRef} className='hidden' />
+
+          {scanResult && (
+            <div
+              className={`mt-6 rounded-2xl border p-4 ${scanResult.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}
+            >
+              <div className='flex items-center justify-between'>
+                <div className='flex items-center gap-3'>
+                  {scanResult.success ? (
+                    <FiCheckCircle className='text-3xl text-green-500' />
+                  ) : (
+                    <FiXCircle className='text-3xl text-red-500' />
+                  )}
+                  <div>
+                    <p className={`text-sm font-bold ${scanResult.success ? 'text-green-700' : 'text-red-700'}`}>
+                      {scanResult.success ? 'Khớp khuôn mặt' : 'Không khớp / Lỗi'}
+                    </p>
+                    <p className='text-xs text-slate-500'>Độ tương đồng: {scanResult.similarity.toFixed(1)}%</p>
+                  </div>
+                </div>
+                {!scanResult.success && !stream && (
+                  <button
+                    onClick={startCamera}
+                    className='rounded-xl bg-pink-100 p-2 text-pink-600 transition hover:bg-pink-200'
+                    title='Thử lại'
+                  >
+                    <FiRefreshCw />
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-slate-700">{status}</p>
-              <div className="flex flex-wrap gap-3">
+          )}
+
+          <div className='mt-6 flex flex-wrap gap-3'>
+            {!stream ? (
+              <button
+                onClick={startCamera}
+                className='flex-1 flex items-center justify-center gap-2 rounded-2xl bg-pink-500 py-3 text-sm font-semibold text-white transition hover:bg-pink-400'
+              >
+                <FiCamera /> {scanResult ? 'Quét lại' : 'Mở Camera'}
+              </button>
+            ) : (
+              <>
                 <button
                   onClick={handleScan}
-                  className="rounded-2xl bg-pink-600 px-5 py-3 text-white transition hover:bg-pink-500 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={isScanning}
+                  disabled={scanMutation.isPending || !selectedSession}
+                  className='flex-1 flex items-center justify-center gap-2 rounded-2xl bg-pink-500 py-3 text-sm font-semibold text-white transition hover:bg-pink-400 disabled:opacity-60'
                 >
-                  {isScanning ? 'Đang quét...' : 'Quét ngay'}
+                  {scanMutation.isPending ? <FiRefreshCw className='animate-spin' /> : <FiCamera />}
+                  {scanMutation.isPending ? 'Đang quét...' : 'Xác nhận quét mặt'}
                 </button>
                 <button
-                  onClick={() => window.location.reload()}
-                  className="rounded-2xl border border-pink-200 bg-white px-5 py-3 text-slate-900 transition hover:bg-pink-50"
+                  onClick={stopCamera}
+                  className='rounded-2xl border border-pink-200 px-5 py-3 text-sm font-medium text-slate-600 transition hover:bg-pink-50'
                 >
-                  Quét lại
+                  Huỷ
                 </button>
-              </div>
-            </div>
-            <canvas ref={canvasRef} className="hidden" />
-          </div>
-
-          <div className="space-y-6 rounded-3xl bg-white p-6 shadow-lg shadow-pink-200/40 border border-pink-100">
-            <div className="rounded-3xl border border-pink-100 bg-pink-50 p-5">
-              <h2 className="text-lg font-semibold text-slate-900">Tài khoản</h2>
-              <p className="mt-2 text-slate-600">{user.name}</p>
-              <p className="text-sm text-slate-500">{user.role === 'student' ? 'Học sinh' : 'Giảng viên'}</p>
-            </div>
-            <div className="rounded-3xl border border-pink-100 bg-pink-50 p-5">
-              <h2 className="text-lg font-semibold text-slate-900">Lưu ý</h2>
-              <ul className="mt-3 space-y-2 text-slate-600">
-                <li>• Camera phải bật và cho phép truy cập.</li>
-                <li>• Không che mặt khi quét.</li>
-                <li>• Hệ thống sẽ tự động gửi dữ liệu tới backend.</li>
-              </ul>
-            </div>
-            {result && (
-              <div className="rounded-3xl border border-pink-200 bg-pink-50 p-5 text-slate-900">
-                <h2 className="text-lg font-semibold">Kết quả điểm danh</h2>
-                <p className="mt-3">Tên: {result.name}</p>
-                <p>MSSV: {result.student_id}</p>
-                <p>Thời gian: {result.time}</p>
-              </div>
+              </>
             )}
           </div>
         </div>
