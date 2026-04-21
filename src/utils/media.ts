@@ -1,4 +1,4 @@
-const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://13.212.37.21:3000'
+const apiBaseUrl = import.meta.env.VITE_API_URL || 'https://numerator-bungee-batboy.ngrok-free.dev'
 
 export const toAbsoluteMediaUrl = (url?: string | null) => {
   if (!url) {

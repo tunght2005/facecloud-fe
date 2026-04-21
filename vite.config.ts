@@ -11,7 +11,7 @@ export default defineConfig({
     port: 3001,
     proxy: {
       '/api': {
-        target: 'http://13.212.37.21:3000',
+        target: 'https://numerator-bungee-batboy.ngrok-free.dev',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
       }

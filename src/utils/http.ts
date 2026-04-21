@@ -2,7 +2,7 @@ import axios, { type AxiosInstance } from 'axios'
 import { toast } from 'react-toastify'
 
 const http: AxiosInstance = axios.create({
-  baseURL: 'http://13.212.37.21:3000',
+  baseURL: 'https://numerator-bungee-batboy.ngrok-free.dev',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
