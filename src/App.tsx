@@ -1,48 +1,199 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { useState } from "react";
 
-function App() {
-  const [count, setCount] = useState(0)
+import Sidebar from "./components/Sidebar";
+import Header from "./components/Header";
+
+import LoginPage from "./pages/LoginAdmin";
+import TeacherPage from "./pages/TeacherAdmin";
+import StudentPage from "./pages/StudentAdmin";
+import ClassPage from "./pages/ClassAdmin";
+
+import AddStudentPage from "./pages/AddStudent";
+import EditStudentPage from "./pages/EditStudent";
+
+import AddTeacherPage from "./pages/AddTeacher";
+import EditTeacherPage from "./pages/EditTeacher";
+
+export default function App() {
+  const [page, setPage] = useState("student");
+
+  const [isLogin, setIsLogin] = useState(
+    localStorage.getItem("isLogin") === "true"
+  );
+
+  const [role, setRole] = useState(
+    localStorage.getItem("role") || ""
+  );
+
+  // ===== STUDENT =====
+  const [students, setStudents] = useState([
+    {
+      id: 1,
+      name: "Nguyen Van A",
+      email: "a@gmail.com",
+      password: "123456",
+      class: "CTK42",
+    },
+  ]);
+
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+
+  const handleAddStudent = (student: any) => {
+    setStudents((prev) => [...prev, { ...student, id: Date.now() }]);
+  };
+
+  const handleUpdateStudent = (updated: any) => {
+    setStudents((prev) =>
+      prev.map((s) => (s.id === updated.id ? updated : s))
+    );
+  };
+
+  const handleDeleteStudent = (id: number) => {
+    if (!confirm("Xoá student?")) return;
+    setStudents((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  // ===== TEACHER =====
+  const [teachers, setTeachers] = useState([
+    {
+      id: 1,
+      name: "Le Van C",
+      email: "c@gmail.com",
+      password: "123456",
+      class: "CTK42",
+    },
+  ]);
+
+  const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
+
+  const handleAddTeacher = (teacher: any) => {
+    setTeachers((prev) => [...prev, { ...teacher, id: Date.now() }]);
+  };
+
+  const handleUpdateTeacher = (updated: any) => {
+    setTeachers((prev) =>
+      prev.map((t) => (t.id === updated.id ? updated : t))
+    );
+  };
+
+  const handleDeleteTeacher = (id: number) => {
+    if (!confirm("Xoá teacher?")) return;
+    setTeachers((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // ===== AUTH =====
+  const handleLogin = () => {
+    const role = localStorage.getItem("role") || "";
+    setIsLogin(true);
+    setRole(role);
+
+    if (role === "teacher") setPage("student");
+  };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    setIsLogin(false);
+    setRole("");
+  };
+
+  // ===== RENDER =====
+  const renderPage = () => {
+    if (role === "student") {
+      return <h2 className="text-red-500">Không có quyền</h2>;
+    }
+
+    switch (page) {
+      case "student":
+        return (
+          <StudentPage
+            students={students}
+            goToAdd={() => setPage("add-student")}
+            onEdit={(s) => {
+              setSelectedStudent(s);
+              setPage("edit-student");
+            }}
+            onDelete={handleDeleteStudent}
+          />
+        );
+
+      case "add-student":
+        return (
+          <AddStudentPage
+            onAdd={handleAddStudent}
+            goBack={() => setPage("student")}
+          />
+        );
+
+      case "edit-student":
+        return (
+          <EditStudentPage
+            student={selectedStudent}
+            onUpdate={handleUpdateStudent}
+            goBack={() => setPage("student")}
+          />
+        );
+
+      case "teacher":
+        return role === "admin" ? (
+          <TeacherPage
+            teachers={teachers}
+            goToAdd={() => setPage("add-teacher")}
+            onEdit={(t) => {
+              setSelectedTeacher(t);
+              setPage("edit-teacher");
+            }}
+            onDelete={handleDeleteTeacher}
+          />
+        ) : null;
+
+      case "add-teacher":
+        return (
+          <AddTeacherPage
+            onAdd={handleAddTeacher}
+            goBack={() => setPage("teacher")}
+          />
+        );
+
+      case "edit-teacher":
+        return (
+          <EditTeacherPage
+            teacher={selectedTeacher}
+            onUpdate={handleUpdateTeacher}
+            goBack={() => setPage("teacher")}
+          />
+        );
+
+      case "class":
+        return role === "admin" ? <ClassPage /> : null;
+
+      default:
+        return null;
+    }
+  };
+
+  if (!isLogin) return <LoginPage onLogin={handleLogin} />;
+
+  if (role === "student") {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gradient-to-b from-pink-500 to-white">
+        <h2 className="text-xl text-red-500">
+          Bạn không có quyền vào Admin
+        </h2>
+      </div>
+    );
+  }
 
   return (
-    <div className='min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-10 p-6'>
-      {/* HERO */}
-      <div className='relative flex items-center justify-center'>
-        <img src={heroImg} className='w-40 h-auto absolute' />
-        <img src={reactLogo} className='w-20 animate-spin-slow' />
-        <img src={viteLogo} className='w-16 absolute right-[-40px]' />
-      </div>
+    <div className="flex">
+      <Sidebar setPage={setPage} role={role} />
 
-      {/* TEXT */}
-      <div className='text-center space-y-3'>
-        <h1 className='text-4xl font-bold text-gray-800'>Get started</h1>
-        <p className='text-gray-500'>
-          Edit <code className='bg-gray-200 px-1 rounded'>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
+      <div className="flex-1 min-h-screen p-6 bg-gradient-to-b from-pink-600 via-pink-200 to-white">
+        <Header onLogout={handleLogout} />
 
-      {/* BUTTON */}
-      <button
-        onClick={() => setCount((c) => c + 1)}
-        className='px-6 py-3 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition'
-      >
-        Count is {count}
-      </button>
-
-      {/* LINKS */}
-      <div className='grid grid-cols-2 gap-8 mt-10'>
-        <a href='https://vite.dev/' target='_blank' className='p-4 bg-white shadow rounded hover:shadow-lg transition'>
-          Explore Vite
-        </a>
-
-        <a href='https://react.dev/' target='_blank' className='p-4 bg-white shadow rounded hover:shadow-lg transition'>
-          Learn React
-        </a>
+        <div className="bg-white p-6 rounded-xl shadow">
+          {renderPage()}
+        </div>
       </div>
     </div>
-  )
+  );
 }
-
-export default App
