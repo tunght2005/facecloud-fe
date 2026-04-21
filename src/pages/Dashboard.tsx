@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import type { User } from '../App'
+import type { User } from '../types'
+import PATHS from '../constants/paths'
 
 type DashboardProps = {
   user: User
@@ -128,7 +129,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
               <p className="mt-3 text-pink-100/90">Chọn chức năng phù hợp để vào trang tương ứng.</p>
               <div className="mt-6 flex flex-col gap-3">
                 {user.role === 'student' ? (
-                  <Link to="/face-scan" className="rounded-2xl bg-white px-5 py-3 text-center font-semibold text-pink-700 transition hover:bg-pink-50">
+                  <Link to={PATHS.FACE_SCAN} className="rounded-2xl bg-white px-5 py-3 text-center font-semibold text-pink-700 transition hover:bg-pink-50">
                     Mở trang điểm danh
                   </Link>
                 ) : (
@@ -136,7 +137,7 @@ export default function Dashboard({ user, onLogout }: DashboardProps) {
                     <p>Giáo viên có thể xem thông tin lớp và học sinh quản lý.</p>
                   </div>
                 )}
-                <Link to="/profile" className="rounded-2xl border border-white/60 bg-white/10 px-5 py-3 text-center font-semibold text-white transition hover:bg-white/20">
+                <Link to={PATHS.PROFILE} className="rounded-2xl border border-white/60 bg-white/10 px-5 py-3 text-center font-semibold text-white transition hover:bg-white/20">
                   Xem hồ sơ
                 </Link>
               </div>

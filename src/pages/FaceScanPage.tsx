@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { User } from '../App'
+import type { User } from '../types'
+import PATHS from '../constants/paths'
 
 type FaceScanPageProps = {
   user: User
@@ -118,7 +119,7 @@ export default function FaceScanPage({ user }: FaceScanPageProps) {
               <h1 className="mt-3 text-3xl font-bold text-slate-900">Điểm danh bằng khuôn mặt</h1>
               <p className="mt-2 text-slate-600">Chỉ dành cho học sinh đã được cấp tài khoản bởi admin.</p>
             </div>
-            <Link to="/dashboard" className="inline-flex items-center justify-center rounded-2xl border border-pink-200 bg-pink-50 px-5 py-3 text-slate-900 transition hover:bg-pink-100">
+            <Link to={PATHS.DASHBOARD} className="inline-flex items-center justify-center rounded-2xl border border-pink-200 bg-pink-50 px-5 py-3 text-slate-900 transition hover:bg-pink-100">
               Quay lại dashboard
             </Link>
           </div>

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import type { User } from '../App'
+import type { User } from '../types'
+import PATHS from '../constants/paths'
 
 type ProfilePageProps = {
   user: User
@@ -63,11 +64,11 @@ export default function ProfilePage({ user }: ProfilePageProps) {
           </div>
 
           <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
-            <Link to="/dashboard" className="inline-flex items-center justify-center rounded-2xl border border-pink-200 bg-white px-6 py-3 text-slate-900 transition hover:bg-pink-50">
+            <Link to={PATHS.DASHBOARD} className="inline-flex items-center justify-center rounded-2xl border border-pink-200 bg-white px-6 py-3 text-slate-900 transition hover:bg-pink-50">
               Quay lại trang chính
             </Link>
             {user.role === 'student' && (
-              <Link to="/face-scan" className="inline-flex items-center justify-center rounded-2xl bg-pink-600 px-6 py-3 text-white transition hover:bg-pink-500">
+              <Link to={PATHS.FACE_SCAN} className="inline-flex items-center justify-center rounded-2xl bg-pink-600 px-6 py-3 text-white transition hover:bg-pink-500">
                 Mở trang điểm danh
               </Link>
             )}

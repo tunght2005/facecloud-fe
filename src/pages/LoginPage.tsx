@@ -1,14 +1,17 @@
 import { useState, type FormEvent } from 'react'
-import type { User } from '../App'
+import { useNavigate } from 'react-router-dom'
+import type { User } from '../types'
+import PATHS from '../constants/paths'
 
 type LoginPageProps = {
   onLogin: (user: User) => void
 }
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<'student' | 'teacher'>('student')
+  const [role, setRole] = useState<'student' | 'teacher' | 'admin'>('student')
   const [error, setError] = useState('')
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -20,9 +23,29 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       return
     }
 
+    if (role === 'admin') {
+      if (email === 'admin@gmail.com' && password === '123456') {
+        localStorage.setItem('isLogin', 'true')
+        localStorage.setItem('role', 'admin')
+        navigate(PATHS.ADMIN)
+      } else {
+        setError('Sai tài khoản hoặc mật khẩu quản trị!')
+      }
+      return
+    }
+
+    // Xử lý login cho student và teacher (Dashboard thường)
     const validPassword = password.length >= 6
     if (!validPassword) {
       setError('Mật khẩu phải có ít nhất 6 ký tự')
+      return
+    }
+
+    if (role === 'teacher' && email === 'teacher@gmail.com' && password === '123456') {
+      // Tuỳ chọn cho giáo viên vào thẳng Admin nếu dùng tài khoản teacher@gmail.com
+      localStorage.setItem('isLogin', 'true')
+      localStorage.setItem('role', 'teacher')
+      navigate(PATHS.ADMIN)
       return
     }
 
@@ -50,19 +73,19 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               FaceCloud School
             </div>
             <div className="space-y-4">
-              <h1 className="text-4xl font-semibold text-slate-900 sm:text-5xl">Đăng nhập điểm danh</h1>
+              <h1 className="text-4xl font-semibold text-slate-900 sm:text-5xl">Đăng nhập hệ thống</h1>
               <p className="max-w-xl text-slate-600 leading-8">
-                Dành cho học sinh và giảng viên. Tài khoản được cấp bởi admin nên không có đăng ký tự do.
+                Chào mừng bạn đến với FaceCloud. Chọn đúng vai trò của mình để đăng nhập vào hệ thống.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-3xl border border-pink-200 bg-pink-50 p-5">
-                <p className="text-sm uppercase tracking-[0.25em] text-pink-500">Chức năng</p>
-                <p className="mt-3 text-base font-medium text-slate-900">Chỉ đăng nhập</p>
+                <p className="text-sm uppercase tracking-[0.25em] text-pink-500">Tài khoản Admin</p>
+                <p className="mt-3 text-base font-medium text-slate-900">admin@gmail.com</p>
               </div>
               <div className="rounded-3xl border border-pink-200 bg-pink-50 p-5">
-                <p className="text-sm uppercase tracking-[0.25em] text-pink-500">Quyền truy cập</p>
-                <p className="mt-3 text-base font-medium text-slate-900">Admin cấp mật khẩu</p>
+                <p className="text-sm uppercase tracking-[0.25em] text-pink-500">Mật khẩu Admin</p>
+                <p className="mt-3 text-base font-medium text-slate-900">123456</p>
               </div>
             </div>
           </div>
@@ -91,11 +114,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 />
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-3">
                 <button
                   type="button"
                   onClick={() => setRole('student')}
-                  className={`rounded-3xl border px-4 py-3 text-sm font-semibold transition ${
+                  className={`rounded-3xl border px-2 py-3 text-xs font-semibold transition ${
                     role === 'student'
                       ? 'border-pink-400 bg-pink-50 text-pink-700 shadow-sm shadow-pink-200'
                       : 'border-pink-200 bg-white text-slate-700 hover:border-pink-300'
@@ -106,7 +129,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 <button
                   type="button"
                   onClick={() => setRole('teacher')}
-                  className={`rounded-3xl border px-4 py-3 text-sm font-semibold transition ${
+                  className={`rounded-3xl border px-2 py-3 text-xs font-semibold transition ${
                     role === 'teacher'
                       ? 'border-pink-400 bg-pink-50 text-pink-700 shadow-sm shadow-pink-200'
                       : 'border-pink-200 bg-white text-slate-700 hover:border-pink-300'
@@ -114,9 +137,24 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 >
                   Giáo viên
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('admin')}
+                  className={`rounded-3xl border px-2 py-3 text-xs font-semibold transition ${
+                    role === 'admin'
+                      ? 'border-pink-400 bg-pink-50 text-pink-700 shadow-sm shadow-pink-200'
+                      : 'border-pink-200 bg-white text-slate-700 hover:border-pink-300'
+                  }`}
+                >
+                  Quản trị
+                </button>
               </div>
 
-              {error && <p className="text-sm text-rose-500">{error}</p>}
+              {error && (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
+                  <p className="text-sm text-rose-600">{error}</p>
+                </div>
+              )}
 
               <button className="w-full rounded-3xl bg-pink-500 px-5 py-3 text-sm font-semibold text-white transition duration-200 hover:bg-pink-400">
                 Đăng nhập
@@ -125,7 +163,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
             <div className="mt-6 rounded-3xl border border-pink-200 bg-pink-50 p-5 text-sm text-slate-600">
               <p className="font-medium text-slate-800">Lưu ý</p>
-              <p className="mt-2 leading-7">Tài khoản chỉ cấp bởi admin. Nếu chưa có, hãy liên hệ quản trị để được cấp quyền truy cập.</p>
+              <p className="mt-2 leading-7">Tài khoản được cấp bởi admin. Chọn đúng vai trò của bạn trước khi bấm đăng nhập.</p>
             </div>
           </div>
         </div>

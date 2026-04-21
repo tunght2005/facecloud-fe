@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import type { User } from '../App'
+import type { User } from '../types'
+import PATHS from '../constants/paths'
 
 type TeacherDashboardProps = {
   user: User
@@ -29,7 +30,7 @@ export default function TeacherDashboard({ user, onLogout }: TeacherDashboardPro
               <p className="mt-2 text-slate-600">Giáo viên phụ trách lớp: {user.homeRoom ?? 'Chưa cập nhật'}</p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Link to="/profile" className="rounded-2xl border border-pink-200 bg-white px-5 py-3 text-sm font-semibold text-pink-700 transition hover:bg-pink-50">
+              <Link to={PATHS.PROFILE} className="rounded-2xl border border-pink-200 bg-white px-5 py-3 text-sm font-semibold text-pink-700 transition hover:bg-pink-50">
                 Xem hồ sơ
               </Link>
               <button
