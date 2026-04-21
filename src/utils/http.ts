@@ -5,7 +5,8 @@ const http: AxiosInstance = axios.create({
   baseURL: 'https://numerator-bungee-batboy.ngrok-free.dev',
   timeout: 10000,
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true'
   }
 })
 
