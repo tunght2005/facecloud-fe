@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import faceApi from '~/apis/face.api'
 import PATHS from '~/constants/paths'
-import { FiCamera, FiUpload, FiCheck, FiRefreshCw, FiLock, FiAlertCircle } from 'react-icons/fi'
+import { FiCamera, FiUpload, FiCheck, FiRefreshCw, FiLock } from 'react-icons/fi'
 
 export default function FaceRegisterPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
