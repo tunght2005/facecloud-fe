@@ -1,4 +1,4 @@
-const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://13.212.37.21:3000'
 
 export const toAbsoluteMediaUrl = (url?: string | null) => {
   if (!url) {

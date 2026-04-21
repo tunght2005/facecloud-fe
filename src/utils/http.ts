@@ -2,7 +2,7 @@ import axios, { type AxiosInstance } from 'axios'
 import { toast } from 'react-toastify'
 
 const http: AxiosInstance = axios.create({
-  baseURL: 'http://localhost:3000',
+  baseURL: 'http://13.212.37.21:3000',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
