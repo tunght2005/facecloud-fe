@@ -28,6 +28,7 @@ const attendanceApi = {
   getSessionDetails: (id: number) =>
     http.get<{ session: AttendanceSession; records: AttendanceRecord[] }>(`/attendance/session/${id}`),
   getAttendanceLogs: (params?: { attendance_session_id?: number; q?: string; page?: number; limit?: number }) =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     http.get<{ logs: any[]; pagination: { total: number; page: number; limit: number; total_pages: number } }>(
       '/attendance/logs',
       { params }
