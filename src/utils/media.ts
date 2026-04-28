@@ -1,4 +1,4 @@
-const apiBaseUrl = import.meta.env.VITE_API_URL || 'https://pipes-facilities-solaris-supervisors.trycloudflare.com'
+const apiBaseUrl = import.meta.env.VITE_API_URL || 'https://confirmed-travels-limitation-yourself.trycloudflare.com'
 export const toAbsoluteMediaUrl = (url?: string | null) => {
   if (!url) {
     return null

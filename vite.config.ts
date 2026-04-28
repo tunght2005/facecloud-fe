@@ -11,7 +11,7 @@ export default defineConfig({
     port: 3001,
     proxy: {
       '/api': {
-        target: 'https://pipes-facilities-solaris-supervisors.trycloudflare.com',
+        target: 'https://confirmed-travels-limitation-yourself.trycloudflare.com',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
       }
